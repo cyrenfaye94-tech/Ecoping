@@ -1,11 +1,4 @@
 <?php
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require 'PHPMailer/src/Exception.php';
-require 'PHPMailer/src/PHPMailer.php';
-require 'PHPMailer/src/SMTP.php';
-
 function sendEmailToResidents($subject, $message, $conn, $barangay = null, $purok = null) {
     $successCount = 0;
     $failCount    = 0;
@@ -39,37 +32,22 @@ function sendEmailToResidents($subject, $message, $conn, $barangay = null, $puro
         }
     }
 
+    $from_email = 'noreply@' . $_SERVER['HTTP_HOST'];
+    $from_name = 'ECOPING System';
+
     while ($row = $res->fetch_assoc()) {
-        $mail = new PHPMailer(true);
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: " . $from_name . " <" . $from_email . ">\r\n";
 
-        try {
-            $mail->isSMTP();
-            $mail->Host       = 'smtp-relay.brevo.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = getenv('BREVO_SMTP_USERNAME');
-            $mail->Password = getenv('BREVO_SMTP_PASSWORD');
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            $mail->Timeout    = 10;
+        $to = $row['email'];
 
-            $mail->setFrom('cyrenfaye94@gmail.com', 'ECOPING System');
-            $mail->addAddress($row['email'], $row['name']);
-
-            $mail->isHTML(true);
-            $mail->Subject = $subject;
-            $mail->Body    = $message;
-            $mail->AltBody = strip_tags($message);
-
-            $mail->send();
+        if (mail($to, $subject, $message, $headers)) {
             $successCount++;
-
-        } catch (Exception $e) {
+        } else {
             $failCount++;
-            $errors[] = "Failed to send to {$row['email']}: " . $mail->ErrorInfo;
+            $errors[] = "Failed to send to {$row['email']}";
         }
-
-        $mail->clearAddresses();
-        $mail->clearAttachments();
     }
 
     if ($successCount > 0) {
